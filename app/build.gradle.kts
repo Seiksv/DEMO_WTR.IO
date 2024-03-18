@@ -43,7 +43,8 @@ android {
 }
 
 dependencies {
-// Dagger
+implementation(libs.play.services.location)
+    // Dagger
     var daggerVersion = "2.48"
     implementation("com.google.dagger:hilt-android:$daggerVersion")
     kapt("com.google.dagger:hilt-android-compiler:$daggerVersion")

@@ -78,7 +78,4 @@ class FirstViewModel @Inject constructor(private val getRealTimeWeatherUseCase: 
     fun round2Decimals(number: Double, numDecimalPlaces: Int): Double {
         return number.toBigDecimal().setScale(2, RoundingMode.HALF_UP).toDouble()
     }
-
-
-
 }

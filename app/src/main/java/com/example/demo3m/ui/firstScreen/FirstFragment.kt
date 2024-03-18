@@ -1,5 +1,7 @@
 package com.example.demo3m.ui.firstScreen
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
 import androidx.fragment.app.Fragment
@@ -12,8 +14,10 @@ import androidx.lifecycle.lifecycleScope
 import com.example.demo3m.R
 import com.example.demo3m.databinding.FragmentFirstBinding
 import androidx.appcompat.widget.SearchView
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.example.demo3m.data.enums.LoadingState
+import com.google.android.gms.location.LocationServices
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -29,7 +33,12 @@ class FirstFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View {
         initUI()
+
         _binding = FragmentFirstBinding.inflate(inflater, container, false)
+
+        val searchView = binding.toolbar.menu.findItem(R.id.action_search).actionView as SearchView
+
+        checkLocationPermission()
 
         binding.btnChangeUnits.setOnClickListener {
             firstFragmentViewModel.changeUnits()
@@ -58,7 +67,6 @@ class FirstFragment : Fragment() {
             }
         }
 
-        val searchView = binding.toolbar.menu.findItem(R.id.action_search).actionView as SearchView
 
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
@@ -86,9 +94,10 @@ class FirstFragment : Fragment() {
     private fun initUI() {
         lifecycleScope.launch {
             firstFragmentViewModel.weatherData.observe(viewLifecycleOwner) {
+                binding.tvLocation.text = it.name ?: "No location name found"
                 binding.tvTermalSense.text = "${it.temperature}"
-                binding.tvLocation.text = "${it.name}"
             }
+
             firstFragmentViewModel.loadingState.observe(viewLifecycleOwner) {
                 setProgressBarStatus()
             }
@@ -138,6 +147,49 @@ class FirstFragment : Fragment() {
                 }
             }
         }
+    }
+
+    private fun checkLocationPermission() {
+        if (ContextCompat.checkSelfPermission(
+                requireContext(),
+                android.Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(
+                arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION),
+                1
+            )
+        } else {
+            fetchLocation()
+        }
+    }
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
+        when (requestCode) {
+            1 -> {
+                if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
+                    fetchLocation()
+                }
+                return
+            }
+        }
+    }
+
+    private fun fetchLocation() {
+        val fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
+
+        fusedLocationClient.lastLocation
+            .addOnSuccessListener { location ->
+                Log.i("FirstFragment", "Location: $location")
+                Log.i("FirstFragment", "Location separated: ${location.latitude},${location.longitude}")
+                if (location != null) {
+                    firstFragmentViewModel.onChangeLocationValue("${location.latitude},${location.longitude}")
+                    firstFragmentViewModel.fetchWeather()
+                }
+            }
     }
 }
 
